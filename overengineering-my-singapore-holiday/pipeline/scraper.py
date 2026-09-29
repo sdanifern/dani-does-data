@@ -7,6 +7,7 @@ to complete https://guide.michelin.com/gb/en/{target_url_location}/restaurants.
 
 # Libraries
 import logging
+import sys
 from pathlib import Path
 import requests
 import random
@@ -25,10 +26,11 @@ logging.basicConfig(
 )
 
 # Custom resources
-# cwd = Path(__file__).resolve().parent
-# scrapertools = cwd.parent / 'src' / 'scrapertools.py'
+cwd = Path(__file__).resolve().parent
+src_dir = cwd.parent / 'src'
+sys.path.insert(0, str(src_dir))
 
-from src.scrapertools import HEADERS
+from scrapertools import HEADERS
 
 
 class Scraper:
@@ -44,8 +46,13 @@ class Scraper:
 
         # Start session with a base header - it'll be shuffled as we go
         self.session = requests.Session()
-        self.session.headers = ({'User-Agent': random.shuffle(HEADERS)})
+        random_user_agent = HEADERS[random.randrange(0, len(HEADERS), 1)]
+        self.session.headers = ({'user-agent': random_user_agent})
 
+        # Reshuffled headers for later
+        self.session.headers = self.shuffled_header(HEADERS, self.session)
+
+        # TODO
         # Set a starting header - DONE
         # Get robots.txt delay and checker if I can visit the page
         # Capture delay
@@ -62,6 +69,26 @@ class Scraper:
             # Move on to the next page
             # Reshuffle header
             # Rinse, repeat
+        
+    def shuffled_header(
+        self,
+        header_list: list,
+        active_session
+    ) -> dict:
+        "Shuffles list of available headers and returns a new user-agent."
+        # Current header capture
+        current_header = active_session.headers['user-agent']
+        
+        # Reshuffling headers list
+        available_headers = header_list.copy()
+        available_headers.remove(current_header)
+        random.shuffle(available_headers)
+
+        # Habemus header
+        new_header = available_headers[0]
+        logger.info("Reshuffled user-agent header")
+        return ({'user-agent': new_header})
+        
 
 if __name__ == "__main__":
     Scraper('selection/singapore')
